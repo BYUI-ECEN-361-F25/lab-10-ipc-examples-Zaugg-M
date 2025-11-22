@@ -42,7 +42,9 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
-#
+
+void Semaphore_Toggle_D4_Task(void *argument);
+void Semaphore_Toggle_D3_Task(void *argument);
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -141,6 +143,22 @@ osSemaphoreId_t SwitchToDebounce;  // Type has to be in here because the GUI aut
 
 uint8_t countdown_display = 9;
 
+/* Definitions for SemaphoreToggleD4 */
+osThreadId_t SemaphoreToggleD4Handle;
+const osThreadAttr_t SemaphoreToggleD4_attributes = {
+  .name = "SemaphoreToggleD4",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+
+/* Definitions for SemaphoreToggleD3 */
+osThreadId_t SemaphoreToggleD3Handle;
+const osThreadAttr_t SemaphoreToggleD3_attributes = {
+  .name = "SemaphoreToggleD3",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+
 /*
  * This is a global variable with multiple writers
  * But should not change, because all writers must have the mutex
@@ -148,7 +166,6 @@ uint8_t countdown_display = 9;
  */
 #define Protected_Count_Initial_Value 50
 uint8_t mutex_protected_count = Protected_Count_Initial_Value ;
-
 
 /* USER CODE END PV */
 
@@ -283,6 +300,15 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+
+  /* creation of SemaphoreToggleD4 */
+  SemaphoreToggleD4Handle = osThreadNew(Semaphore_Toggle_D4_Task, NULL,
+                                        &SemaphoreToggleD4_attributes);
+
+  /* creation of SemaphoreToggleD3 */
+  SemaphoreToggleD3Handle = osThreadNew(Semaphore_Toggle_D3_Task, NULL,
+                                        &SemaphoreToggleD3_attributes);
+
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -429,8 +455,8 @@ static void MX_USART2_UART_Init(void)
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
-/* USER CODE BEGIN MX_GPIO_Init_1 */
-/* USER CODE END MX_GPIO_Init_1 */
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
+  /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
@@ -513,8 +539,8 @@ static void MX_GPIO_Init(void)
   HAL_NVIC_SetPriority(EXTI4_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(EXTI4_IRQn);
 
-/* USER CODE BEGIN MX_GPIO_Init_2 */
-/* USER CODE END MX_GPIO_Init_2 */
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
+  /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
@@ -545,9 +571,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 		}
 
 	}
-
-
-
 
 /**
   * @brief  Retargets the C library printf function to the USART.
@@ -779,6 +802,37 @@ void StartDebounce(void *argument)
   /* USER CODE END StartDebounce */
 }
 
+/* USER CODE BEGIN Semaphore_Toggle_Tasks */
+/**
+  * @brief Task that waits for the debounced Button 1 semaphore
+  *        and toggles LED D4.
+  */
+void Semaphore_Toggle_D4_Task(void *argument)
+{
+  for(;;)
+  {
+    /* Wait for a debounced Button 1 press */
+    osSemaphoreAcquire(Button_1_SemaphoreHandle, osWaitForever);
+    HAL_GPIO_TogglePin(LED_D4_GPIO_Port, LED_D4_Pin);
+    osDelay(1);
+  }
+}
+
+/**
+  * @brief Second task that also waits for the Button 1 semaphore
+  *        and toggles LED D3.
+  */
+void Semaphore_Toggle_D3_Task(void *argument)
+{
+  for(;;)
+  {
+    osSemaphoreAcquire(Button_1_SemaphoreHandle, osWaitForever);
+    HAL_GPIO_TogglePin(LED_D3_GPIO_Port, LED_D3_Pin);
+    osDelay(1);
+  }
+}
+/* USER CODE END Semaphore_Toggle_Tasks */
+
 /* SW_Timer_Countdown function */
 void SW_Timer_Countdown(void *argument)
 {
@@ -811,7 +865,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 0 */
 
   /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM3) {
+  if (htim->Instance == TIM3)
+  {
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
@@ -837,8 +892,7 @@ void Error_Handler(void)
   }
   /* USER CODE END Error_Handler_Debug */
 }
-
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.

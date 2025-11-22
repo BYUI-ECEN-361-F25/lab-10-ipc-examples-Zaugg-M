@@ -1,5 +1,5 @@
 # ECEN-361 Lab-10: IPC-Examples
-     Student Name:  ___________________________________
+     Student Name:  Michael Zaugg
 
 ## Introduction and Objectives of the Lab
 
@@ -80,12 +80,12 @@ Now make sure to write the code inside of the Semaphore_Toggle_Task function tha
 
 <br>
 1. How did your task ‘wait’ for the debounced button? <br>
-<mark>_______________________________________________________ </mark>
+<mark> it blocks on osSemaphoreAcquire(Button_1_SemaphoreHandle, osWaitForever); so it sleeps until the DebounceTask, after finishing the 30 ms delay, releases the semaphore for debounced button press. </mark>
 <br>
 <br><br>
 
 2.)	How long is the time between the button interrupt coming in and it being enabled again? <br>
-<mark>_______________________________________________________ </mark>
+<mark> about 30 ms, which is the osDelay(30) </mark>
 ><br>
 > <br>
 
@@ -96,11 +96,11 @@ Now create a second task (semaphore_Toggle_D3) -- <p>
 
 
 3.)	Do both of (D4 and D3) toggle with a single button press?  Describe the behavior?  <br>
-<mark>_________________________________________________________________________________<br><br>
+<mark>No, even though both tasks wait on the same debounced Button_1_Semaphore, only one of them toggles per button press. A binary semaphore can only be acquired by one task at a time, so whichever task the scheduler wakes first will take the semaphore and toggle its LED. The other task stays blocked until the next button press. Because both tasks have the same priority, it looks kinda random which LED toggles each time.<br><br>
 
 4.)	Now change one of the priorities of these two tasks, re-compile,  and re-run.
 How has the behavior changed?
-<mark>_________________________________________________________________________________<br><br>
+<mark> When one task is assigned a higher priority, it will almost always acquire the semaphore first every time the button is pressed. The higher-priority task’s LED toggles on every press, while the lower-priority task rarely or never gets the semaphore. The LED for the higher-priority task goes above the behavior and the lower-priority LED barely changes.r><br>
 
 
 ## Part 2: Mutexes
@@ -152,12 +152,12 @@ current count. The first two processes are done for you "Mutex_CountDownTask" an
 >
 ><br>
 >7.)	Comment on the Up/Down/ ”—” display that you see.  <br><br>
-><mark>___________________________________________________________________________________________________________<br><br><p>
+><mark>The display constantly switches between increasing numbers, decreasing numbers, and short flashes of “--.” Even though three tasks are competing, the mutex keeps the shared variable consistent so the display never shows corrupted or half-updated values. The result is rapid but clean changes as each task takes turns holding the mutex.<br><br><p>
 
 
 >8.)	Is there a ‘priority’ associated with the Mutex?  If so, how can it be changed?
 ><br>  
-><mark>___________________________________________________________________________________________________________<br><br>
+><mark>The mutex itself does not have a priority, but the tasks using it do. The mutex uses priority inheritance to prevent priority inversion, meaning a lower-priority task may temporarily inherit a higher priority if it holds the mutex. To change who tends to access the mutex first, you adjust the task priorities, not the mutex.<br><br>
 <p>
 
 ><br>
@@ -165,7 +165,7 @@ current count. The first two processes are done for you "Mutex_CountDownTask" an
 
 >  Change the priority of the Reset to be osPriorityIdle.  This is the lowest priority available. Note that you will not find this priority type listed in the .ioc configuration, as it is intended to be used for idle threads. This priority must be manually set in the code.<br>
 ><br> Did you see any effect on the ability of Button_3 to reset the count?<br><br>
-><mark>___________________________________________________________________________________________________________<br><br>
+><mark>ResetGlobal still works, but it responds more slowly. Because it runs at the lowest priority..<br><br>
 >
 ---
 <!--------------------------------------------------------------------------------->
@@ -196,12 +196,12 @@ display digit.
 >
 >10.) This timer was created via the GUI  (.IOC file).  It’s type is *“osTimerPeriodic”* which means it repeats over and over.<br><br>
 What other options can a Software Timer take to change its Type and operation? <br>
-><mark>___________________________________________________________________________________________________________<br><br>
+><mark>It can run as either a one-shot timer or a periodic timer. You can also start, stop, or reset it dynamically in code.<br><br>
 
 >11).	The debounce for the switches here used an osDelay() call (non-blocking).  Is there any advantage to using a SWTimer here instead?<br>
 > Explain why or why not?
 >
-><mark>___________________________________________________________________________________________________________<br><br>
+><mark>A software timer can make the design cleaner by letting the ISR simply start a one-shot timer, which handles the debounce automatically. It avoids having a task sit blocked in a delay and scales better if more buttons or different debounce times are added. Functionally both work, but a SW timer is often the better solution.<br><br>
 
 
 <!--------------------------------------------------------------------------------->
